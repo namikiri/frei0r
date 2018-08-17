@@ -7,11 +7,14 @@
         \/                \/          \/
 
 ```
-Minimalistic plugin API for video effects  v1.6
-		by the Piksel Developers Union
 
-  Updated info on https://frei0r.dyne.org
+*Minimalistic plugin API for video effects, by the Piksel Developers Union*
 
+Updated info on https://frei0r.dyne.org
+
+[![software by Dyne.org](https://www.dyne.org/wp-content/uploads/2015/12/software_by_dyne.png)](http://www.dyne.org)
+
+[![Build Status](https://travis-ci.org/dyne/frei0r.svg?branch=master)](https://travis-ci.org/dyne/frei0r)
 
 # What frei0r is 
 
@@ -130,6 +133,7 @@ If you are new to frei0r (but not to programming) the best thing is probably to 
 
 ## C++ Filter example 
 
+You could find a tutorial filter [here](https://github.com/dyne/frei0r/tree/master/src/filter/tutorial) in the source code.
 A simple skeleton for a frei0r video filter looks like this:
 
 ```c++

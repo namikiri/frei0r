@@ -57,14 +57,14 @@ public:
         // http://stackoverflow.com/questions/381621/using-arrays-or-stdvectors-in-c-whats-the-performance-gap
         // Using std::numeric_limits just for fun here.
         lookupTable = std::vector<uint8_t>(std::numeric_limits<uint8_t>::max()+1, 0);
-        std::cout << lookupTable.size() << " elements in the lookup table." << std::endl;
+        // std::cerr << lookupTable.size() << " elements in the lookup table." << std::endl;
 
         // Calculate the entries in the lookup table. Applied on the R value in this example.
         // If the R value of an input pixel is r, then the output R value will be mapped to lookupTable[r].
         // We'll use a calculation that looks expensive here.
         float f, h;
         int tempVal;
-        for (int i = 0; i < lookupTable.size(); i++) {
+        for (size_t i = 0; i < lookupTable.size(); i++) {
             f = i / (float)std::numeric_limits<uint8_t>::max(); // Normalize to [0,1]
             h = f/5;
             f = 2*f - 1; // Stretch to [-1,1]
@@ -123,14 +123,15 @@ public:
         // can be pre-computed; when applying the filter, only thing left to do is reading the value
         // in the lookup table.
 
-        // This parameter allows to do simple benchmarking: Rendering a video with uint8_t pointers and with uint32_t pointers.
+        // This parameter allows one to do simple benchmarking: Rendering a
+        // video with uint8_t pointers and with uint32_t pointers.
         // (Don't forget to substract the rendering time without this effect applied to avoid counting
         // encoding and decoding as well!)
         if (m_pointerMethod == 0) {
             uint8_t *in_pointer = (uint8_t *) in;
             uint8_t *out_pointer = (uint8_t *) out;
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
+            for (unsigned int x = 0; x < width; x++) {
+                for (unsigned int y = 0; y < height; y++) {
 
                     // Apply the parabola to the R channel with a single lookup
                     *out_pointer++ = lookupTable[*in_pointer++];
@@ -148,7 +149,7 @@ public:
             // This method takes only 80% of the time if only processing the R channel,
             // and 90% of the time with additionally the G channel,
             // compared to the above solution using uint8_t pointers.
-            for (int px = 0; px < width*height; px++) {
+            for (unsigned int px = 0; px < width*height; px++) {
                 out[px] =
                             // Parabola to Red channel
                             lookupTable[(in[px] & 0xFF)]
@@ -163,8 +164,8 @@ public:
 private:
     // The various f0r_params are adjustable parameters.
     // This one determines the size of the black bar in this example.
-    f0r_param_double m_barSize;
-    f0r_param_bool m_pointerMethod;
+    double m_barSize;
+    bool m_pointerMethod;
     std::vector<uint8_t> lookupTable;
     std::vector<uint8_t> additionTable;
 

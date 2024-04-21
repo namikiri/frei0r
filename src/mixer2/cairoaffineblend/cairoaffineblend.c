@@ -64,7 +64,7 @@ void f0r_get_plugin_info(f0r_plugin_info_t* info)
   info->color_model = F0R_COLOR_MODEL_RGBA8888;
   info->frei0r_version = FREI0R_MAJOR_VERSION;
   info->major_version = 0;
-  info->minor_version = 9; 
+  info->minor_version = 10; 
   info->num_params = 9; 
   info->explanation = "Composites second input on first input applying user-defined transformation, opacity and blend mode";
 }
@@ -298,13 +298,13 @@ void f0r_update2(f0r_instance_t instance, double time, const uint32_t* inframe1,
   assert(instance);
   cairo_affineblend_instance_t* inst = (cairo_affineblend_instance_t*) instance;
 
-  unsigned char* src = (unsigned char*)inframe1;
-  unsigned char* dst = (unsigned char*)inframe2;
+  unsigned char* dst = (unsigned char*)inframe1;
+  unsigned char* src = (unsigned char*)inframe2;
   unsigned char* out = (unsigned char*)outframe;
   int pixels = inst->width * inst->height;
 
-  frei0r_cairo_premultiply_rgba (src, pixels, 0xff);
   frei0r_cairo_premultiply_rgba (dst, pixels, -1);
-  draw_composite (inst, out, src, dst, time);
+  frei0r_cairo_premultiply_rgba (src, pixels, -1);
+  draw_composite (inst, out, dst, src, time);
   frei0r_cairo_unpremultiply_rgba (out, pixels);
 }

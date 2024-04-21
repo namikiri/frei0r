@@ -234,7 +234,7 @@ void f0r_get_param_info(f0r_param_info_t* info, int param_index)
   case 5:
     info->name = "Bézier spline";
     info->type = F0R_PARAM_STRING;
-    info->explanation = "Use cubic Bézier spline. Has to be a sorted list of points in the format \"handle1x;handle1y#pointx;pointy#handle2x;handle2y\"(pointx = in, pointy = out). Points are separated by a \"|\".The values can have \"double\" precision. x, y for points should be in the range 0-1. x,y for handles might also be out of this range.";
+    info->explanation = "Use cubic Bézier spline. Has to be a sorted list of points in the format 'handle1x;handle1y#pointx;pointy#handle2x;handle2y'(pointx = in, pointy = out). Points are separated by a '|'.The values can have 'double' precision. x, y for points should be in the range 0-1. x,y for handles might also be out of this range.";
   default:
 	if (param_index > 5) {
 	  info->name = get_param_name(param_index - 6);
@@ -255,9 +255,9 @@ f0r_instance_t f0r_construct(unsigned int width, unsigned int height)
   inst->pointNumber = 2;
   inst->formula = 1;
   inst->bspline = calloc(1, sizeof(char));
-  inst->bsplineMap = malloc(sizeof(double));
-  inst->csplineMap = malloc(sizeof(double));
-  inst->curveMap = malloc(sizeof(float));
+  inst->bsplineMap = NULL;
+  inst->csplineMap = NULL;
+  inst->curveMap = NULL;
   inst->points[0] = 0;
   inst->points[1] = 0;
   inst->points[2] = 1;
@@ -273,12 +273,12 @@ f0r_instance_t f0r_construct(unsigned int width, unsigned int height)
 
 void f0r_destruct(f0r_instance_t instance)
 {
-  if (((curves_instance_t*)instance)->bspline)
-      free(((curves_instance_t*)instance)->bspline);
-  free(((curves_instance_t*)instance)->bsplineMap);
-  free(((curves_instance_t*)instance)->csplineMap);
-  free(((curves_instance_t*)instance)->curveMap);
-  free(instance);
+  curves_instance_t* inst = (curves_instance_t*)instance;
+  free(inst->bspline);
+  free(inst->bsplineMap);
+  free(inst->csplineMap);
+  free(inst->curveMap);
+  free(inst);
 }
 
 void f0r_set_param_value(f0r_instance_t instance,
@@ -608,7 +608,7 @@ void updateBsplineMap(f0r_instance_t instance)
     char **pointStr = calloc(1, sizeof(char *));
     int count = tokenise(inst->bspline, "|", &pointStr);
 
-    bspline_point points[count];
+    bspline_point *points = (bspline_point *) malloc(count * sizeof(bspline_point));
 
     for (int i = 0; i < count; ++i) {
         char **positionsStr = calloc(1, sizeof(char *));
@@ -666,7 +666,7 @@ void updateBsplineMap(f0r_instance_t instance)
             c = 1;
         }
         step = 1 / (double)c;
-        position curve[c];
+        position *curve = (position *) malloc((c + 1) * sizeof(position));
         while (t <= 1) {
             curve[pn++] = pointOnBezier(t, p);
             t += step;
@@ -697,7 +697,11 @@ void updateBsplineMap(f0r_instance_t instance)
             else
                 inst->bsplineMap[j] = CLAMP0255(ROUND(y * 255));
         }
+
+        free(curve);
     }
+
+    free(points);
 }
 
 /**
@@ -755,9 +759,10 @@ void updateCsplineMap(f0r_instance_t instance)
     }
     if (inst->drawCurves) {
         int scale = inst->height / 2;
+        free(inst->curveMap);
         inst->curveMap = malloc(scale * sizeof(float));
         for(i = 0; i < scale; i++)
-            inst->curveMap[i] = spline((float)i / scale, points, (size_t)inst->pointNumber, coeffs) * scale;
+            inst->curveMap[i] = spline((double)i / scale, points, (size_t)inst->pointNumber, coeffs) * scale;
     }
 
     free(coeffs);
@@ -770,6 +775,13 @@ void f0r_update(f0r_instance_t instance, double time,
   assert(instance);
   curves_instance_t* inst = (curves_instance_t*)instance;
   unsigned int len = inst->width * inst->height;
+
+  // test initalization c/b spline
+  double *splinemap = strlen(inst->bspline)>0 ? inst->bsplineMap : inst->csplineMap;
+  if(!splinemap) {
+	memcpy(outframe,inframe,inst->width * inst->height * 4);
+	return;
+  }
 
   unsigned char* dst = (unsigned char*)outframe;
   const unsigned char* src = (unsigned char*)inframe;
@@ -949,7 +961,6 @@ void f0r_update(f0r_instance_t instance, double time,
 	free(points);
 	//drawing curve on the graph
 	float halfLineWidth = lineWidth * .5;
-	float coeff = 255. / scale;
 	float prevY = 0;
 	for(int j = 0; j < scale; j++) {
 	  float y = inst->curveMap[j];

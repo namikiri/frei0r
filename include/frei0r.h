@@ -23,7 +23,7 @@
  * @section sec_overview Overview
  *
  * If you are new to frei0r, the best thing is probably to have
- * a look at the <a href="frei0r_8h-source.html">frei0r header</a>,
+ * a look at the <a href="frei0r_8h_source.html">frei0r header</a>,
  * which is quite simple.
  *
  * After that, you might want to look at the 
@@ -227,13 +227,13 @@
  * f0r_init() is called once when the plugin is loaded by the application.
  * \see f0r_deinit
  */
-int f0r_init();
+int f0r_init(void);
 
 /**
  * f0r_deinit is called once when the plugin is unloaded by the application.
  * \see f0r_init
  */
-void f0r_deinit();
+void f0r_deinit(void);
 
 //---------------------------------------------------------------------------
 
@@ -556,7 +556,7 @@ void f0r_get_param_value(f0r_instance_t instance,
  * inframe and outframe must be aligned to an integer multiple of 16 bytes
  * in memory.
  *
- * This funcition should not alter the parameters of the effect in any
+ * This function should not alter the parameters of the effect in any
  * way (\ref f0r_get_param_value should return the same values after a call
  * to \ref f0r_update as before the call).
  *

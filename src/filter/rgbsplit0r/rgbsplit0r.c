@@ -31,7 +31,6 @@ typedef struct rgbsplit0r_instance
     unsigned int shiftX;
     unsigned int shiftY;
 
-    uint32_t pxR, pxG, pxB;
 } rgbsplit0r_instance_t;
 
 
@@ -61,6 +60,7 @@ inline static void rgbsplit0r_extract_color(uint32_t *pixelIn, uint32_t *pixelOu
             pxOut[0] = 0;
             break;
     }
+    pxOut[3] = pxIn[3];
 }
 
 int f0r_init()
@@ -79,7 +79,7 @@ void f0r_get_plugin_info(f0r_plugin_info_t* rgbsplit0rInfo)
     rgbsplit0rInfo->color_model = F0R_COLOR_MODEL_RGBA8888;
     rgbsplit0rInfo->frei0r_version = FREI0R_MAJOR_VERSION;
     rgbsplit0rInfo->major_version = 1;
-    rgbsplit0rInfo->minor_version = 0;
+    rgbsplit0rInfo->minor_version = 1;
     rgbsplit0rInfo->num_params =  2;
     rgbsplit0rInfo->explanation = "RGB splitting and shifting";
 }
@@ -109,8 +109,8 @@ f0r_instance_t f0r_construct(unsigned int width, unsigned int height)
 {
     rgbsplit0r_instance_t* inst = (rgbsplit0r_instance_t*)calloc(1, sizeof(*inst));
     inst->width = width; inst->height = height;
-    inst->shiftY = 0.5;
-    inst->shiftX = 0.5;
+    inst->shiftY = 0;
+    inst->shiftX = 0;
 
     return (f0r_instance_t)inst;
 }
@@ -183,30 +183,26 @@ void f0r_get_param_value(f0r_instance_t instance,
 
 
 void f0r_update(f0r_instance_t instance, double time,
-		const uint32_t* inframe, uint32_t* outframe)
+		const uint32_t* src, uint32_t* dst)
 {
     assert(instance);
     rgbsplit0r_instance_t* inst = (rgbsplit0r_instance_t*)instance;
     unsigned int x, y;
 
-    uint32_t* dst = outframe;
-    const uint32_t* src = inframe;
-
     for (y = 0; y < inst->height; y++)
         for (x = 0; x < inst->width; x++)
         {
+            uint32_t pxR = 0, pxG = 0, pxB = 0;
 
             // First make a blue layer shifted back
-            if (((int)(x - inst->shiftX) >= 0) &&
-                ((int)(y - inst->shiftY) >= 0))
+            if (((x - inst->shiftX) < inst->width) &&
+                ((y - inst->shiftY) < inst->height))
             {
                 rgbsplit0r_extract_color((uint32_t *)(src +
                     (x - inst->shiftX) +
                     (y - inst->shiftY)*inst->width),
-                    &inst->pxB, 2);
+                    &pxB, 2);
             }
-            else
-                inst->pxB = 0;
 
             // The red layer is shifted forward
             if ((x + inst->shiftX < inst->width) &&
@@ -215,17 +211,14 @@ void f0r_update(f0r_instance_t instance, double time,
                 rgbsplit0r_extract_color((uint32_t *)(src +
                     (x + inst->shiftX) +
                     (y + inst->shiftY)*inst->width),
-                    &inst->pxR, 0);
+                    &pxR, 0);
             }
-            else
-                inst->pxR = 0;
 
             // Green layer is on its place
             rgbsplit0r_extract_color((uint32_t *)(src + x + (y*inst->width)),
-                    &inst->pxG, 1);
+                    &pxG, 1);
 
-            // No need to save alpha because it will distort the resulting image
-            *(dst + x + (y*inst->width)) = (inst->pxG | inst->pxB | inst->pxR);
+            *(dst + x + (y*inst->width)) = (pxG | pxB | pxR);
         }
 }
 

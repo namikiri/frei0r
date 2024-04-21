@@ -60,7 +60,7 @@ namespace frei0r
       s_params.push_back(param_info(name,desc,F0R_PARAM_COLOR));
     }
     
-    void register_param(f0r_param_double& p_loc,
+    void register_param(double& p_loc,
 			const std::string& name,
 			const std::string& desc)
     {
@@ -100,11 +100,12 @@ namespace frei0r
       switch (s_params[param_index].m_type)
 	{
 	case F0R_PARAM_BOOL :
-	  *static_cast<f0r_param_bool*>(param) = ptr ? 0.0 : 1.0;
+	  *static_cast<f0r_param_bool*>(param)
+	    = *static_cast<f0r_param_bool*>(ptr) > 0.5 ? 1.0 : 0.0;
 	  break;
 	case F0R_PARAM_DOUBLE:
 	  *static_cast<f0r_param_double*>(param)
-	    = *static_cast<double*>(ptr);
+	    = *static_cast<f0r_param_double*>(ptr);
 	  break;
 	case F0R_PARAM_COLOR:
 	  *static_cast<f0r_param_color*>(param)
@@ -291,7 +292,7 @@ void f0r_get_plugin_info(f0r_plugin_info_t* info)
   info->major_version = frei0r::s_version.first; 
   info->minor_version = frei0r::s_version.second; 
   info->explanation = frei0r::s_explanation.c_str();
-  info->num_params =  frei0r::s_params.size(); 
+  info->num_params =  static_cast<int>(frei0r::s_params.size()); 
 }
 
 void f0r_get_param_info(f0r_param_info_t* info, int param_index)

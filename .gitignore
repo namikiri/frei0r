@@ -1,3 +1,5 @@
+.envrc
+gallery
 aclocal.m4
 autom4te.cache
 config.h
@@ -22,7 +24,6 @@ tags
 *.lo
 cmake_install.cmake
 CMakeFiles
-CMakeCache.txt
 install_manifest.txt
 *~
 Makefile.in
@@ -34,3 +35,7 @@ TAGS
 ylwrap
 frei0r.pc
 doc/html
+/build/
+/out/
+/.vs/
+CMakeSettings.json

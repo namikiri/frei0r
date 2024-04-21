@@ -17,15 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
-#include <math.h>
-#include <float.h>
-#include <limits.h>
-#include <time.h>
-#include <ctype.h>
-#include <opencv/cv.h>
+#include <opencv2/opencv.hpp>
 #include "frei0r.hpp"
 #include "frei0r_math.h"
 
@@ -40,38 +35,36 @@ frei0r::construct<FaceDetect> plugin("opencvfacedetect",
 
 class FaceDetect: public frei0r::filter
 {
-private:
-    IplImage *image;
 
+private:
+    cv::Mat image;
     unsigned count;
-    CvSeq *objects;
-    CvRect roi;
-    CvMemStorage *storage;
-    CvHaarClassifierCascade *cascade;
+    std::vector<cv::Rect> objects;
+    cv::Rect roi;
+    cv::CascadeClassifier cascade;
 
     // plugin parameters
     std::string classifier;
-    f0r_param_double shape;
-    f0r_param_double recheck;
-    f0r_param_double threads;
-    f0r_param_double search_scale;
-    f0r_param_double neighbors;
-    f0r_param_double smallest;
-    f0r_param_double scale;
-    f0r_param_double stroke;
-    f0r_param_bool   antialias;
-    f0r_param_double alpha;
+    double shape;
+    double recheck;
+    double threads;
+    double search_scale;
+    double neighbors;
+    double smallest;
+    double scale;
+    double stroke;
+    bool   antialias;
+    double alpha;
     f0r_param_color  color[5];
-	
+
+    std::string old_classifier;
+
 public:
     FaceDetect(int width, int height)
-        : image(0)
-        , count(0)
-        , objects(0)
-        , storage(0)
-        , cascade(0)
+        : count(0)
     {
         roi.width = roi.height = 0;
+        roi.x = roi.y = 0;
         classifier = "/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml";
         register_param(classifier,
                        "Classifier",
@@ -116,21 +109,18 @@ public:
 
     ~FaceDetect()
     {
-        if (cascade) cvReleaseHaarClassifierCascade(&cascade);
-        if (storage) cvReleaseMemStorage(&storage);        
     }
 
     void update(double time,
                 uint32_t* out,
                 const uint32_t* in)
     {
-        if (!cascade) {
-            cvSetNumThreads(cvRound(threads * 100));
-            if (classifier.length() > 0) {
-                cascade = (CvHaarClassifierCascade*) cvLoad(classifier.c_str(), 0, 0, 0 );
-                if (!cascade)
+        if (cascade.empty()) {
+            cv::setNumThreads(cvRound(threads * 100));
+            if (classifier.length() > 0 && classifier != old_classifier) {
+                if (!cascade.load(classifier.c_str()))
                     fprintf(stderr, "ERROR: Could not load classifier cascade %s\n", classifier.c_str());
-                storage = cvCreateMemStorage(0);
+		old_classifier = classifier;
             }
             else {
                 memcpy(out, in, size * 4);
@@ -143,10 +133,8 @@ public:
         neighbors = CLAMP(neighbors, 0.01, 1.0);
 
         // copy input image to OpenCV
-        if( !image )
-            image = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 4);
-        memcpy(image->imageData, in, size * 4);
-        
+        image = cv::Mat(height, width, CV_8UC4, (void*)in);
+
         // only re-detect periodically to control performance and reduce shape jitter
         int recheckInt = abs(cvRound(recheck * 1000));
         if ( recheckInt > 0 && count % recheckInt )
@@ -158,16 +146,15 @@ public:
         else
         {
             count = 1;   // reset the recheck counter
-            if (objects) // reset the list of objects
-                cvClearSeq(objects);
-            
-            double elapsed = (double) cvGetTickCount();
+            if (objects.size() > 0) // reset the list of objects
+                objects.clear();
+            double elapsed = (double) cv::getTickCount();
 
             objects = detect();
 
             // use detection time to throttle frequency of re-detect vs. redraw (automatic recheck)
-            elapsed = cvGetTickCount() - elapsed;
-            elapsed = elapsed / ((double) cvGetTickFrequency() * 1000.0);
+            elapsed = cv::getTickCount() - elapsed;
+            elapsed = elapsed / ((double) cv::getTickFrequency() * 1000.0);
 
             // Automatic recheck uses an undocumented negative parameter value,
             // which is not compliant, but technically feasible.
@@ -177,109 +164,93 @@ public:
         }
         
         draw();
-        
+
         // copy filtered OpenCV image to output
-        memcpy(out, image->imageData, size * 4);
-        cvReleaseImage(&image);
+        memcpy(out, image.data, size * 4);
     }
     
 private:
-    CvSeq* detect()
+    std::vector<cv::Rect> detect()
     {
-        if (!cascade) return 0;
+        std::vector<cv::Rect> faces;
+        if (cascade.empty()) return faces;
         double scale = this->scale == 0? 1.0 : this->scale;
-        IplImage* gray = cvCreateImage(cvSize(width, height ), 8, 1);
-        IplImage* small = cvCreateImage(cvSize(cvRound(width * scale), cvRound(height * scale)), 8, 1);
-        int min = cvRound(smallest * 1000);            
-        CvSeq* faces = 0;
+        cv::Mat image_roi = image;
+        cv::Mat gray, small;
+        int min = cvRound(smallest * 1000. * scale);
         
         // use a region of interest to improve performance
         // This idea comes from the More than Technical blog:
         // http://www.morethantechnical.com/2009/08/09/near-realtime-face-detection-on-the-iphone-w-opencv-port-wcodevideo/
         if ( roi.width > 0 && roi.height > 0)
         {
-            cvSetImageROI(small, roi);
-            CvRect scaled_roi = cvRect(roi.x / scale, roi.y / scale,
-                                       roi.width / scale, roi.height / scale);
-            cvSetImageROI(image, scaled_roi);
-            cvSetImageROI(gray, scaled_roi);
+            image_roi = image(roi);
         }
-        
+
         // use an equalized grayscale to improve detection
-        cvCvtColor(image, gray, CV_BGR2GRAY);
+        cv::cvtColor(image_roi, gray, cv::COLOR_BGR2GRAY);
+
         // use a smaller image to improve performance
-        cvResize(gray, small, CV_INTER_LINEAR);
-        cvEqualizeHist(small, small);
+        cv::resize(gray, small, cv::Size(cvRound(gray.cols * scale), cvRound(gray.rows * scale)));
+        cv::equalizeHist(small, small);
         
         // detect with OpenCV
-        cvClearMemStorage(storage);
-        faces = cvHaarDetectObjects(small, cascade, storage,
-                                    search_scale * 10.0,
-                                    cvRound(neighbors * 100),
-                                    CV_HAAR_DO_CANNY_PRUNING,
-                                    cvSize(min, min));
+        cascade.detectMultiScale(small, faces, 1.1, 2, 0, cv::Size(min, min));
         
 #ifdef USE_ROI
-        if (!faces || faces->total == 0)
+        if (faces.size() == 0)
         {
             // clear the region of interest
             roi.width = roi.height = 0;
+            roi.x = roi.y = 0;
         }
-        else if (faces && faces->total > 0)
+        else if (faces.size() > 0)
         {
-            // determine the region of interest from the first detected object
-            // XXX: based on the first object only?
-            CvRect* r = (CvRect*) cvGetSeqElem(faces, 0);
-            
-            if (roi.width > 0 && roi.height > 0)
+            // determine the region of interest from the detected objects
+            int minx = width * scale;
+            int miny = height * scale;
+            int maxx, maxy = 0;
+            for (size_t i = 0; i < faces.size(); i++)
             {
-                r->x += roi.x;
-                r->y += roi.y;
+                faces[i].x+= roi.x * scale;
+                faces[i].y+= roi.y * scale;
+                minx = MIN(faces[i].x, minx);
+                miny = MIN(faces[i].y, miny);
+                maxx = MAX(faces[i].x + faces[i].width, maxx);
+                maxy= MAX(faces[i].y + faces[i].height, maxy);
             }
-            int startX = MAX(r->x - PAD, 0);
-            int startY = MAX(r->y - PAD, 0);
-            int w = small->width - startX - r->width - PAD * 2;
-            int h = small->height - startY - r->height - PAD * 2;
-            int sw = r->x - PAD, sh = r->y - PAD;
-            
+            minx= MAX(minx - PAD, 0);
+            miny= MAX(miny - PAD, 0);
+            maxx = MIN(maxx + PAD, width * scale);
+            maxy = MIN(maxy + PAD, height * scale);
+
             // store the region of interest
-            roi.x = startX;
-            roi.y = startY,
-            roi.width = r->width + PAD * 2 + ((w < 0) ? w : 0) + ((sw < 0) ? sw : 0);
-            roi.height = r->height + PAD * 2 + ((h < 0) ? h : 0) + ((sh < 0) ? sh : 0); 
+            roi.x = minx / scale;
+            roi.y = miny / scale;
+            roi.width = (maxx - minx) / scale;
+            roi.height = (maxy - miny) / scale; 
         }
 #endif
-        cvReleaseImage(&gray);
-        cvReleaseImage(&small);
-        cvResetImageROI(image);
         return faces;
     }
     
     void draw()
     {
         double scale = this->scale == 0? 1.0 : this->scale;
-        CvScalar colors[5] = {
-#if !defined CV_VERSION_EPOCH && (CV_VERSION_MAJOR >= 3)
-            CvScalar(cvRound(color[0].r * 255), cvRound(color[0].g * 255), cvRound(color[0].b * 255), cvRound(alpha * 255)),
-            CvScalar(cvRound(color[1].r * 255), cvRound(color[1].g * 255), cvRound(color[1].b * 255), cvRound(alpha * 255)),
-            CvScalar(cvRound(color[2].r * 255), cvRound(color[2].g * 255), cvRound(color[2].b * 255), cvRound(alpha * 255)),
-            CvScalar(cvRound(color[3].r * 255), cvRound(color[3].g * 255), cvRound(color[3].b * 255), cvRound(alpha * 255)),
-            CvScalar(cvRound(color[4].r * 255), cvRound(color[4].g * 255), cvRound(color[4].b * 255), cvRound(alpha * 255)),
-#else
-            {{cvRound(color[0].r * 255), cvRound(color[0].g * 255), cvRound(color[0].b * 255), cvRound(alpha * 255)}},
-            {{cvRound(color[1].r * 255), cvRound(color[1].g * 255), cvRound(color[1].b * 255), cvRound(alpha * 255)}},
-            {{cvRound(color[2].r * 255), cvRound(color[2].g * 255), cvRound(color[2].b * 255), cvRound(alpha * 255)}},
-            {{cvRound(color[3].r * 255), cvRound(color[3].g * 255), cvRound(color[3].b * 255), cvRound(alpha * 255)}},
-            {{cvRound(color[4].r * 255), cvRound(color[4].g * 255), cvRound(color[4].b * 255), cvRound(alpha * 255)}},
-#endif
-        };
+        cv::Scalar colors[5] = {
+            cv::Scalar(cvRound(color[0].r * 255), cvRound(color[0].g * 255), cvRound(color[0].b * 255), cvRound(alpha * 255)),
+            cv::Scalar(cvRound(color[1].r * 255), cvRound(color[1].g * 255), cvRound(color[1].b * 255), cvRound(alpha * 255)),
+            cv::Scalar(cvRound(color[2].r * 255), cvRound(color[2].g * 255), cvRound(color[2].b * 255), cvRound(alpha * 255)),
+            cv::Scalar(cvRound(color[3].r * 255), cvRound(color[3].g * 255), cvRound(color[3].b * 255), cvRound(alpha * 255)),
+            cv::Scalar(cvRound(color[4].r * 255), cvRound(color[4].g * 255), cvRound(color[4].b * 255), cvRound(alpha * 255)),
+        }; 
         
-        for (int i = 0; i < (objects ? objects->total : 0); i++)
+        for (size_t i = 0; i < objects.size(); i++)
         {
-            CvRect* r = (CvRect*) cvGetSeqElem(objects, i);
-            CvPoint center;
-            int thickness = stroke <= 0? CV_FILLED : cvRound(stroke * 100);
-            int linetype = antialias? CV_AA : 8;
+            cv::Rect* r = (cv::Rect*) &objects[i];
+            cv::Point center;
+            int thickness = stroke <= 0? cv::FILLED : cvRound(stroke * 100);
+            int linetype = antialias? cv::LINE_AA : 8;
             
             center.x = cvRound((r->x + r->width * 0.5) / scale);
             center.y = cvRound((r->y + r->height * 0.5) / scale);
@@ -290,29 +261,19 @@ private:
             case 0:
                 {
                     int radius = cvRound((r->width + r->height) * 0.25 / scale);
-                    cvCircle(image, center, radius, colors[i % 5], thickness, linetype);
+                    cv::circle(image, center, radius, colors[i % 5], thickness, linetype);
                     break;
                 }
             case 1:
                 {
-#if !defined CV_VERSION_EPOCH && (CV_VERSION_MAJOR >= 3)
-                    CvBox2D box = CvBox2D(CvPoint2D32f(center.x, center.y), CvSize2D32f(r->width / scale, (r->height / scale) * 1.2), 90);
-#else
-                    CvBox2D box = {{center.x, center.y}, {r->width / scale, (r->height / scale) * 1.2}, 90};
-#endif
-                    cvEllipseBox(image, box, colors[i % 5], thickness, linetype);
+                    cv::ellipse(image, center, cv::Size(r->width / scale, (r->height / scale) * 1.2), 90, 0, 360, colors[i % 5], thickness, linetype);
                     break;
                 }
             case 2:
                 {
-#if !defined CV_VERSION_EPOCH && (CV_VERSION_MAJOR >= 3)
-                    CvPoint pt1 = CvPoint(r->x / scale, r->y / scale);
-                    CvPoint pt2 = CvPoint((r->x + r->width) / scale, (r->y + r->height) / scale);
-#else
-                    CvPoint pt1 = {r->x / scale, r->y / scale};
-                    CvPoint pt2 = {(r->x + r->width) / scale, (r->y + r->height) / scale};
-#endif
-                    cvRectangle(image, pt1, pt2, colors[i % 5], thickness, linetype);
+                    cv::Point pt1 = cv::Point(r->x / scale, r->y / scale);
+                    cv::Point pt2 = cv::Point((r->x + r->width) / scale, (r->y + r->height) / scale);
+                    cv::rectangle(image, pt1, pt2, colors[i % 5], thickness, linetype);
                     break;
                 }
             }

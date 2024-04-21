@@ -2,7 +2,7 @@
 #define INCLUDED_FREI0R_MATH_H
 
 /*
-  
+
   Code stripped from The Gimp:
   INT_MULT(a,b,t)
   INT_MULT3(a,b,c,t)
@@ -10,7 +10,7 @@
   CLAMP
   ROUND
   MAX255
-  
+
   Code stripped from Drone:
   CLAMP0255
   SQR
@@ -18,7 +18,7 @@
 
 /* Clamps a int32-range int between 0 and 255 inclusive. */
 #ifndef CLAMP0255
-unsigned char CLAMP0255(int32_t a)
+static inline unsigned char CLAMP0255(int32_t a)
 {
   return (unsigned char)
     ( (((-a) >> 31) & a)  // 0 if the number was negative
@@ -44,8 +44,8 @@ unsigned char CLAMP0255(int32_t a)
 #endif
 
 #ifndef CLAMP
-//! Clamp x at lower = l and upper = u.
-#define CLAMP(x,l,u) ( x < l ? l : ( x > u ? u : x ) )
+//! Clamp x at min and max
+#define CLAMP(x,min,max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
 #endif
 
 #ifndef ROUND

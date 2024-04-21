@@ -78,16 +78,15 @@ typedef struct		//premica v ravnini
 	float p;
 } premica2;
 
-//------------------------------------------------------
-//premica skozi dve tocki v ravnini (2D)
-//izracuna a,b,c za enacbo premice:   ax + by + c = 0
-//ps se sin a, cos a in p za normalno obliko
-//vrne: (return value)
-//-10	ce ni mozno dolociti p. (tocki sovpadata) coincident points
-//0	splosna p.			general case
-//+1	navpicna p.	x v *a		vertical
-//+2	vodoravna p.	y v *b		horizontal
-//a line through two points
+// line through two points in the plane (2D)
+// calculate a, b, c for the equation of the line: ax + by + c = 0
+// ps se sin a, cos a and p for normal form
+// return: (return value)
+// - 10 if it is not possible to determine p. coincident points
+// 0 general p. general case
+// + 1 vertical p. x v * a vertical
+// + 2 horizontal p. y v * b horizontal
+// a line through two points
 int premica2d(tocka2 t1, tocka2 t2, premica2 *p)
 {
 	float dx,dy,m;
@@ -131,10 +130,10 @@ int premica2d(tocka2 t1, tocka2 t2, premica2 *p)
 	return 0;
 }
 
-//-----------------------------------------------------
-//razdalja tocke od premice (za alpha feather)
-//distance between a point and a line
-//needed only for alpha feathering
+// ------------------------------------------------ -----
+// point distance from line (for alpha feather)
+// distance between a point and a line
+// needed only for alpha feathering
 float razd_t_p(tocka2 t, premica2 p)
 {
 	float r;
@@ -144,12 +143,12 @@ float razd_t_p(tocka2 t, premica2 p)
 	return r;
 }
 
-//-----------------------------------------------------
-//presecisce dveh premic v ravnini (2D)
-//vrne:
-//0  ce je vse OK
-//-1 ce sta premici vzporedni
-//intersection of two lines
+// ------------------------------------------------ -----
+// intersection of two lines in a plane (2D)
+// return:
+// 0 if everything is OK
+// - 1 if the lines are parallel
+// intersection of two lines
 int presecisce2(premica2 p1, premica2 p2, tocka2 *t)
 {
 	float d1,d2,d3;
@@ -166,13 +165,13 @@ int presecisce2(premica2 p1, premica2 p2, tocka2 *t)
 	return 0;
 }
 
-//---------------------------------------------------------------
-//generate mapping for a general quadrangle
-//wi,hi = input image size
-//wo,ho = output image size
-//vog[] = the four corners
-//str: 0=no stretch  1=do stretch
-//strx,stry:	stretch values   [0...1]   0.5 = no stretch
+// ------------------------------------------------ ---------------
+// generate mapping for a general quadrangle
+// wi, hi = input image size
+// wo, ho = output image size
+// vog [] = the four corners
+// str: 0 = no stretch 1 = do stretch
+// strx, stry: stretch values ​​[0 ... 1] 0.5 = no stretch
 void cetverokotnik4(int wi, int hi, int wo, int ho, tocka2 vog[], int str, float strx, float stry, float *map)
 {
 	double a,b,c,d,e,f,g,h,a2,b2,c2,u,v,aa,bb,de,sde,v1,v2,u1,u2;
@@ -237,12 +236,12 @@ void cetverokotnik4(int wi, int hi, int wo, int ho, tocka2 vog[], int str, float
 				}
 			}
 			aa=b+d*v1; bb=f+h*v1;
-			if (fabsf(aa)>fabsf(bb))
+			if (fabs(aa)>fabs(bb))
 				u1 = (aa!=0.0) ? -(a+c*v1)/aa : 1000.0;
 			else
 				u1 = (bb!=0.0) ? -(e+g*v1)/bb : 1000.0;
 			aa=b+d*v2; bb=f+h*v2;
-			if (fabsf(aa)>fabsf(bb))
+			if (fabs(aa)>fabs(bb))
 				u2 = (aa!=0.0) ? -(a+c*v2)/aa : 1000.0;
 			else
 				u2 = (bb!=0.0) ? -(e+g*v2)/bb : 1000.0;
@@ -428,7 +427,7 @@ void make_alphamap(unsigned char *amap, tocka2 vog[], int wo, int ho, float *map
 //-------------------------------------------------------
 void apply_alphamap(uint32_t* frame, int w, int h, unsigned char *amap, int operation)
 {
-	int i,j, length;
+	int i, length;
 	uint32_t t;
         length = w * h;
 
@@ -477,14 +476,14 @@ void apply_alphamap(uint32_t* frame, int w, int h, unsigned char *amap, int oper
         }
 }
 
-//---------------------------------------------------------------
-//funkcija za byte polja (char)
-//generate map from the four corners
-//first checks for different types of degenerate geometrty...
-//wi,hi		input image size
-//wo,ho		output image size
-//vog[]		the four corners
-//nots[]		"inner" sides (for alpha feathering)
+// ------------------------------------------------ ---------------
+// function for byte fields (char)
+// generate map from the four corners
+// first checks for different types of degenerate geometrty ...
+// wi, hi input image size
+// wo, ho output image size
+// vog [] the four corners
+// nots [] "inner" sides (for alpha feathering)
 int geom4c_b(int wi, int hi, int wo, int ho, tocka2 vog[], int str, float strx, float stry, float *map, int nots[])
 {
 	premica2 p12,p23,p34,p41;
@@ -974,6 +973,8 @@ void f0r_get_param_value(f0r_instance_t instance, f0r_param_t param, int param_i
 	}
 }
 
+#define EPSILON 1e-5f
+#define EQUIVALENT_FLOATS(x, y) (fabsf((x) - (y)) < EPSILON)
 
 //-------------------------------------------------
 void f0r_update(f0r_instance_t instance, double time, const uint32_t* inframe, uint32_t* outframe)
@@ -983,6 +984,22 @@ void f0r_update(f0r_instance_t instance, double time, const uint32_t* inframe, u
 
 	p=(inst*)instance;
 
+    if (EQUIVALENT_FLOATS(p->x1, 0.333333f) &&
+        EQUIVALENT_FLOATS(p->y1, 0.333333f) &&
+        EQUIVALENT_FLOATS(p->x2, 0.666666f) &&
+        EQUIVALENT_FLOATS(p->y2, 0.333333f) &&
+        EQUIVALENT_FLOATS(p->x3, 0.666666f) &&
+        EQUIVALENT_FLOATS(p->y3, 0.666666f) &&
+        EQUIVALENT_FLOATS(p->x4, 0.333333f) &&
+        EQUIVALENT_FLOATS(p->y4, 0.666666f) &&
+        (!p->stretchON || (
+            EQUIVALENT_FLOATS(p->stretchx, 0.5f) &&
+            EQUIVALENT_FLOATS(p->stretchy, 0.5f))))
+    {
+        memcpy(outframe, inframe, p->w * p->h * 4);
+        return;
+    }
+            
 	if (p->mapIsDirty) {
 		tocka2 vog[4];
 		int nots[4];

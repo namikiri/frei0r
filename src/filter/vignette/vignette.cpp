@@ -17,6 +17,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if defined(_MSC_VER)
+#define _USE_MATH_DEFINES
+#endif /* _MSC_VER */
 #include <cmath>
 #include "frei0r.hpp"
 #include "frei0r_math.h"
@@ -29,8 +32,8 @@
   with a cos⁴ curve. Additionally the x:y aspect ratio of the vignette can be
   changed (note that normal cameras with a round aperture always have an aspect ratio
   of 1:1, but for cinematic effects the aspect ratio is often adjusted to match
-  the frame's aspect ratio). The ClearCenter value allows to shift the vignetting away
-  from the center, preserving it from changes.
+  the frame's aspect ratio). The ClearCenter value allows one to shift the
+  vignetting away from the center, preserving it from changes.
 
   */
 class Vignette : public frei0r::filter
@@ -38,9 +41,9 @@ class Vignette : public frei0r::filter
 
 public:
 
-    f0r_param_double m_aspect; ///< Neutral value: 0.5
-    f0r_param_double m_cc; ///< Neutral value: 0
-    f0r_param_double m_soft; ///< Suggested value: 0.6
+    double m_aspect; ///< Neutral value: 0.5
+    double m_cc; ///< Neutral value: 0
+    double m_soft; ///< Suggested value: 0.6
 
     Vignette(unsigned int width, unsigned int height) :
         m_width(width),
@@ -87,7 +90,7 @@ public:
 
         // Darken the pixels by multiplying with the vignette's factor
         float *vignette = m_vignette;
-        for (int i = 0; i < size; i++) {
+        for (unsigned int i = 0; i < size; i++) {
             *dest++ = (char) (*vignette * *pixel++);
             *dest++ = (char) (*vignette * *pixel++);
             *dest++ = (char) (*vignette * *pixel++);
@@ -98,9 +101,9 @@ public:
     }
 
 private:
-    f0r_param_double m_prev_aspect;
-    f0r_param_double m_prev_cc;
-    f0r_param_double m_prev_soft;
+    double m_prev_aspect;
+    double m_prev_cc;
+    double m_prev_soft;
 
     float *m_vignette;
     bool m_initialized;

@@ -175,7 +175,7 @@ void frei0r_cairo_set_rgb_LITTLE_ENDIAN(cairo_t* cr, double red, double green, d
 }
 
 /**
-* freior_cairo_set_color_stop_rgba_LITLLE_ENDIAN(
+* freior_cairo_set_color_stop_rgba_LITTLE_ENDIAN(
 * @pat: Cairo pattern
 * @offset: offset of color position in pattern space, 0 - 1
 * @red: red component, 0 - 1
@@ -187,7 +187,7 @@ void frei0r_cairo_set_rgb_LITTLE_ENDIAN(cairo_t* cr, double red, double green, d
 * Switches red and blue channels to get correct color on little endian machines. 
 * This method only works correctly on little endian machines.
 */
-void freior_cairo_set_color_stop_rgba_LITLLE_ENDIAN(cairo_pattern_t *pat, double offset, 
+void freior_cairo_set_color_stop_rgba_LITTLE_ENDIAN(cairo_pattern_t *pat, double offset, 
                                                     double red, double green, double blue, double alpha)
 {                               
   cairo_pattern_add_color_stop_rgba (pat, offset, blue, green, red, alpha);
@@ -234,9 +234,13 @@ void frei0r_cairo_premultiply_rgba (unsigned char *rgba, int pixels, int alpha)
   int i = pixels + 1;
   while ( --i ) {
     register unsigned char a = rgba[3];
-    rgba[0] = ( rgba[0] * a ) >> 8;
-    rgba[1] = ( rgba[1] * a ) >> 8;
-    rgba[2] = ( rgba[2] * a ) >> 8;
+    if (a == 0) {
+      *((uint32_t *)rgba) = 0;
+    } else if (a < 0xff) {
+      rgba[0] = ( rgba[0] * a ) >> 8;
+      rgba[1] = ( rgba[1] * a ) >> 8;
+      rgba[2] = ( rgba[2] * a ) >> 8;
+    }
     if (alpha >= 0) rgba[3] = alpha;
     rgba += 4;
   }
@@ -254,11 +258,46 @@ void frei0r_cairo_unpremultiply_rgba (unsigned char *rgba, int pixels)
   int i = pixels + 1;
   while ( --i ) {
     register unsigned char a = rgba[3];
-	if (a != 0) {
-            rgba[0] = MIN(( rgba[0] << 8 ) / a, 255);
-            rgba[1] = MIN(( rgba[1] << 8 ) / a, 255);
-            rgba[2] = MIN(( rgba[2] << 8 ) / a, 255);
-	}
+    if (a > 0 && a < 0xff) {
+      rgba[0] = MIN(( rgba[0] << 8 ) / a, 255);
+      rgba[1] = MIN(( rgba[1] << 8 ) / a, 255);
+      rgba[2] = MIN(( rgba[2] << 8 ) / a, 255);
+    }
     rgba += 4;
+  }
+}
+
+/**
+ * Convert frei0r RGBA to pre-multiplied alpha as needed by Cairo.
+ *
+ * \param rgba the image buffer with format F0R_COLOR_MODEL_RGBA8888
+ * \param pixels the size of the image buffer in number of pixels
+ * \param alpha if >= 0, the alpha channel will be set to this value
+ * \see frei0r_cairo_premultiply_rgba
+ *
+ * This is the same as frei0r_cairo_premultiply_rgba but it writes the
+ * output to a different buffer.
+ */
+void frei0r_cairo_premultiply_rgba2 (unsigned char *in, unsigned char *out,
+                                     int pixels, int alpha)
+{
+  int i = pixels + 1;
+  while ( --i ) {
+    register unsigned char a = in[3];
+    if (a == 0) {
+      *((uint32_t *)out) = 0;
+    } else if (a == 0xff) {
+      memcpy(out, in, 4);
+    } else {
+      out[0] = ( in[0] * a ) >> 8;
+      out[1] = ( in[1] * a ) >> 8;
+      out[2] = ( in[2] * a ) >> 8;
+      if (alpha < 0)
+        out[3] = a;
+    }
+    if (alpha >= 0)
+        out[3] = alpha;
+    in += 4;
+    out += 4;
   }
 }

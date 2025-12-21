@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "frei0r.h"
-#include "frei0r_math.h"
+#include "frei0r/math.h"
 
 double PI=3.14159265358979;
 
@@ -119,7 +119,7 @@ void color_halftone(f0r_instance_t instance, double time,
         // We check all four neighbours, but in practice only one can ever overlap any given point.
         for (i = 0; i < 5; i++) 
         {
-          // Find neigbouring grid point
+          // Find neighbouring grid point
           ttx = tx + mx[i]*gridSize;
           tty = ty + my[i]*gridSize;
           // Transform back into image space

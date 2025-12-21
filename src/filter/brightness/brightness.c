@@ -21,7 +21,7 @@
 #include <assert.h>
 
 #include "frei0r.h"
-#include "frei0r_math.h"
+#include "frei0r/math.h"
 
 typedef struct brightness_instance
 {
@@ -107,7 +107,7 @@ void f0r_set_param_value(f0r_instance_t instance,
   {
     int val;
   case 0:
-    /* constrast */
+    /* contrast */
     val = (int) ((*((double*)param) - 0.5) * 512.0); /* remap to [-256, 256] */
     if (val != inst->brightness)
     {

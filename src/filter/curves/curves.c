@@ -28,7 +28,7 @@
 #include <stdio.h>
 
 #include "frei0r.h"
-#include "frei0r_math.h"
+#include "frei0r/math.h"
 
 #define MAX3(a, b, c) ( ( a > b && a > c) ? a : (b > c ? b : c) )
 #define MIN3(a, b, c) ( ( a < b && a < c) ? a : (b < c ? b : c) )
@@ -388,7 +388,7 @@ void f0r_get_param_value(f0r_instance_t instance,
 
 double* gaussSLESolve(size_t size, double* A) {
 	int extSize = size + 1;
-	//direct way: tranform matrix A to triangular form
+	//direct way: transform matrix A to triangular form
 	for(int row = 0; row < size; row++) {
 		int col = row;
 		int lastRowToSwap = size - 1;
@@ -546,7 +546,7 @@ position pointOnBezier(double t, position points[4])
     /*
      * Calculating a point on the bezier curve using the coefficients from Bernstein basis polynomial of degree 3.
      * Using the De Casteljau algorithm would be slightly faster when calculating a lot of values
-     * but the difference is far from noticable here since we update the spline only when the parameter changes
+     * but the difference is far from noticeable here since we update the spline only when the parameter changes
      */
     double c1 = (1-t) * (1-t) * (1-t);
     double c2 = 3 * t * (1-t) * (1-t);
@@ -556,6 +556,10 @@ position pointOnBezier(double t, position points[4])
     pos.y = points[0].y*c1 + points[1].y*c2 + points[2].y*c3 + points[3].y*c4;
     return pos;
 }
+
+#if defined(_WIN32) || defined(_WIN64)
+# define strtok_r strtok_s
+#endif
 
 /**
  * Splits given string into sub-strings at given delimiter.
@@ -569,11 +573,11 @@ int tokenise(char *string, const char *delimiter, char ***tokens)
     int count = 0;
     char *input = strdup(string);
     char *result = NULL;
-    result = strtok(input, delimiter);
+    result = strtok_r(string, delimiter, &input);
     while (result != NULL) {
         *tokens = realloc(*tokens, (count + 1) * sizeof(char *));
         (*tokens)[count++] = strdup(result);
-        result = strtok(NULL, delimiter);
+        result = strtok_r(NULL, delimiter, &input);
     }
     free(input);
     return count;
@@ -776,7 +780,7 @@ void f0r_update(f0r_instance_t instance, double time,
   curves_instance_t* inst = (curves_instance_t*)instance;
   unsigned int len = inst->width * inst->height;
 
-  // test initalization c/b spline
+  // test initialization c/b spline
   double *splinemap = strlen(inst->bspline)>0 ? inst->bsplineMap : inst->csplineMap;
   if(!splinemap) {
 	memcpy(outframe,inframe,inst->width * inst->height * 4);

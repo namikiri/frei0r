@@ -24,7 +24,7 @@
 #include <stdio.h>
 
 #include "frei0r.h"
-#include "frei0r_math.h"
+#include "frei0r/math.h"
 
 typedef struct three_point_balance_instance
 {
@@ -167,7 +167,7 @@ void f0r_get_param_value(f0r_instance_t instance,
 
 double* gaussSLESolve(size_t size, double* A) {
 	int extSize = size + 1;
-	//direct way: tranform matrix A to triangular form
+	//direct way: transform matrix A to triangular form
 	for(int row = 0; row < size; row++) {
 		int col = row;
 		int lastRowToSwap = size - 1;

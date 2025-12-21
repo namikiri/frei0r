@@ -101,7 +101,7 @@ namespace frei0r
 	{
 	case F0R_PARAM_BOOL :
 	  *static_cast<f0r_param_bool*>(param)
-	    = *static_cast<f0r_param_bool*>(ptr) > 0.5 ? 1.0 : 0.0;
+	    = *static_cast<bool*>(ptr) ? 1.0 : 0.0;
 	  break;
 	case F0R_PARAM_DOUBLE:
 	  *static_cast<f0r_param_double*>(param)
@@ -341,7 +341,7 @@ void f0r_update2(f0r_instance_t instance, double time,
                                              inframe3);
 }
 
-// compability for frei0r 1.0 
+// compatibility for frei0r 1.0 
 void f0r_update(f0r_instance_t instance, 
 		double time, const uint32_t* inframe, uint32_t* outframe)
 {

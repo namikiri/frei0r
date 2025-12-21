@@ -1,5 +1,5 @@
 /*
- * frei0r_cairo.h
+ * frei0r/cairo.h
  * Copyright 2012 Janne Liljeblad 
  *
  * This file is part of Frei0r.
@@ -22,7 +22,7 @@
 
 #include <cairo.h>
 #include <string.h>
-#include "frei0r_math.h"
+#include "frei0r/math.h"
 
 /**
 * String identifiers for gradient types available using Cairo.
@@ -62,6 +62,14 @@
 */
 void frei0r_cairo_set_operator(cairo_t *cr, char *op)
 {
+  // Validate inputs
+  if (!cr || !op) {
+    if (cr) {
+      cairo_set_operator (cr, CAIRO_OPERATOR_OVER);
+    }
+    return;
+  }
+
   if(strcmp(op, NORMAL) == 0)
   {
     cairo_set_operator (cr, CAIRO_OPERATOR_OVER);
@@ -196,7 +204,7 @@ void freior_cairo_set_color_stop_rgba_LITTLE_ENDIAN(cairo_pattern_t *pat, double
 /**
 * frei0r_cairo_get_pixel_position
 * @norm_pos: position in range 0 - 1, either x or y
-* @dim: dimension, either witdh or height
+* @dim: dimension, either width or height
 *
 * Converts double range [0 -> 1] to pixel range [-2*dim -> 3*dim]. Input 0.4 gives position 0.
 *
@@ -231,6 +239,11 @@ double frei0r_cairo_get_scale (double norm_scale)
  */
 void frei0r_cairo_premultiply_rgba (unsigned char *rgba, int pixels, int alpha)
 {
+  // Validate inputs
+  if (!rgba || pixels <= 0) {
+    return;
+  }
+
   int i = pixels + 1;
   while ( --i ) {
     register unsigned char a = rgba[3];
@@ -255,6 +268,11 @@ void frei0r_cairo_premultiply_rgba (unsigned char *rgba, int pixels, int alpha)
  */
 void frei0r_cairo_unpremultiply_rgba (unsigned char *rgba, int pixels)
 {
+  // Validate inputs
+  if (!rgba || pixels <= 0) {
+    return;
+  }
+
   int i = pixels + 1;
   while ( --i ) {
     register unsigned char a = rgba[3];
@@ -281,6 +299,11 @@ void frei0r_cairo_unpremultiply_rgba (unsigned char *rgba, int pixels)
 void frei0r_cairo_premultiply_rgba2 (unsigned char *in, unsigned char *out,
                                      int pixels, int alpha)
 {
+  // Validate inputs
+  if (!in || !out || pixels <= 0) {
+    return;
+  }
+
   int i = pixels + 1;
   while ( --i ) {
     register unsigned char a = in[3];

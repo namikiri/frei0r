@@ -35,13 +35,13 @@ Copyright (C) 2011  Marko Cebokli    http://lea.hamradio.si/~s57uuu
        CONTENTS OF FIBE.H FILE:
     --------------------------------
 
-calcab_lp1()	auxilliary function to calculate lowpass
+calcab_lp1()	auxiliary function to calculate lowpass
         tap coefficients for FIBE-2
 
-young_vliet()	auxilliary function to calculate tap coefs
+young_vliet()	auxiliary function to calculate tap coefs
         for Gauss approximation with FIBE-3
 
-rep()		auxilliary function to calculate wraparound
+rep()		auxiliary function to calculate wraparound
         values for FIBE-2
 
 fibe1o_8()	one tap quadrilateral IIR filter
@@ -69,7 +69,7 @@ and therefore time consuming "walks" through memory.
 
 #include <sys/types.h>
 #include <string.h>
-#include "frei0r_math.h"
+#include "frei0r/math.h"
 
 //---------------------------------------------------------
 //koeficienti za biquad lowpass  iz f in q

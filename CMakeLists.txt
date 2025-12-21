@@ -1,13 +1,15 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.12)
 
 list (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 project (frei0r)
-set (VERSION 1.8)
+set (VERSION 2.5.1)
 
 include(GNUInstallDirs)
 
 option (WITHOUT_OPENCV "Disable plugins dependent upon OpenCV" OFF)
+option (WITHOUT_FACERECOGNITION "Disable facedetect plugin to avoid protobuf conflicts" OFF)
+
 if (NOT WITHOUT_OPENCV)
   find_package (OpenCV)
 endif ()
@@ -35,8 +37,7 @@ set (FREI0R_1_1_DEF "${CMAKE_SOURCE_DIR}/msvc/frei0r_1_1.def")
 # --- custom targets: ---
 INCLUDE( cmake/modules/TargetDistclean.cmake OPTIONAL)
 
-# See this thread for a ridiculous discussion about the simple question how to install a header file with CMake: http://www.cmake.org/pipermail/cmake/2009-October/032874.html
-install (DIRECTORY include DESTINATION . FILES_MATCHING PATTERN "frei0r.h" PATTERN "msvc" EXCLUDE)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # For code documentation run: doxygen doc/Doxyfile
 # add_subdirectory (doc)

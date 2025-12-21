@@ -1,4 +1,4 @@
-[![Frei0r logo](https://github.com/dyne/frei0r/raw/gh_pages/pics/frei0r.png)](https://frei0r.dyne.org)
+[![Frei0r logo](https://frei0r.dyne.org/pics/fla_name_lb.webp)](https://frei0r.dyne.org)
 
 <img src="https://files.dyne.org/software_by_dyne.png" width="300">
 
@@ -52,6 +52,10 @@ Stable frei0r releases are built automatically and made available on
 ## https://github.com/dyne/frei0r/releases
 
 Frei0r sourcecode is released under the terms of the GNU General Public License and, eventually other compatible Free Software licenses.
+
+## Packaging
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/frei0r.svg?columns=3)](https://repology.org/project/frei0r/versions)
 
 ## Build dependencies 
 

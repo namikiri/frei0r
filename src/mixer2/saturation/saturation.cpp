@@ -19,8 +19,8 @@
  */
 
 #include "frei0r.hpp"
-#include "frei0r_math.h"
-#include "frei0r_colorspace.h"
+#include "frei0r/math.h"
+#include "frei0r/colorspace.h"
 
 #define NBYTES 4
 
@@ -63,7 +63,7 @@ public:
  
          g1 = g2;
  
-         /*  set the dstination  */
+         /*  set the destination  */
          hsv_to_rgb_int(&r1, &g1, &b1);
  
          dst[0] = r1;
